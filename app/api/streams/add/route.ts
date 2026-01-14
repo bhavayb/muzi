@@ -1,43 +1,63 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prismaClient } from "@/app/lib/db";
+import { getServerSession } from "next-auth";
 import youtubesearchapi from "youtube-search-api";
 
-const yt_regex = new RegExp("^https:\/\/www\.youtube\.com\/watch\\?v=[\\w-]{11}");
+const yt_regex = new RegExp("^https:\\/\\/www\\.youtube\\.com\\/watch\\?v=[\\w-]{11}");
 
-const createStreamSchema = z.object({
-    creatorId: z.string(),
+const addStreamSchema = z.object({
     url: z.string()
 });
 
 export async function POST(req: NextRequest) {
     try {
-        const data = createStreamSchema.parse(await req.json());
+        // Get user from session
+        const session = await getServerSession();
+        if (!session?.user?.email) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        // Find user in database
+        const user = await prismaClient.user.findFirst({
+            where: {
+                email: session.user.email
+            }
+        });
+
+        if (!user) {
+            return NextResponse.json({ error: "User not found" }, { status: 404 });
+        }
+
+        // Parse and validate request body
+        const data = addStreamSchema.parse(await req.json());
         const isYt = yt_regex.test(data.url);
         
         if (!isYt) {
-            return NextResponse.json({ error: "Invalid YouTube URL" }, { status: 411 });
+            return NextResponse.json({ error: "Invalid YouTube URL" }, { status: 400 });
         }
 
-        // ✅ FIX: Extract video ID properly - remove "?" from parameter name
+        // Extract video ID
         const urlParams = new URL(data.url).searchParams;
-        const extractedId = urlParams.get("v"); // Changed from "?v=" to "v"
+        const extractedId = urlParams.get("v");
 
-        // Validate video ID before making API call
+        // Validate video ID
         if (!extractedId || extractedId.length !== 11) {
-            return NextResponse.json({ error: "Invalid YouTube video ID" }, { status: 411 });
+            return NextResponse.json({ error: "Invalid YouTube video ID" }, { status: 400 });
         }
 
-        // Now safe to fetch video details
+        // Fetch video details from YouTube
         const res = await youtubesearchapi.GetVideoDetails(extractedId);
         console.log("YouTube Video title:", res.title);
         console.log("YouTube Video thumbnail:", res.thumbnail.thumbnails);
+        
         const thumbnails = res.thumbnail.thumbnails;
-        thumbnails.sort((a : {width: number}, b : {width: number}) => a.width < b.width ? -1 : 1);
+        thumbnails.sort((a: {width: number}, b: {width: number}) => a.width < b.width ? -1 : 1);
 
+        // Create stream in database
         const stream = await prismaClient.stream.create({
             data: {
-                userId: data.creatorId,
+                userId: user.id,
                 url: data.url,
                 extractedId,
                 type: "YouTube",
@@ -48,46 +68,24 @@ export async function POST(req: NextRequest) {
         });
 
         return NextResponse.json({ 
-            message: "Stream created successfully", 
-            id: stream.id 
+            message: "Stream added successfully", 
+            id: stream.id,
+            stream: stream
         }, { status: 201 });
         
     } catch (error) {
         console.error("Error creating stream:", error);
+        
+        if (error instanceof z.ZodError) {
+            return NextResponse.json({ 
+                error: "Invalid request data",
+                details: error.issues
+            }, { status: 400 });
+        }
+        
         return NextResponse.json({ 
             error: "Internal server error",
             message: error instanceof Error ? error.message : "Unknown error"
         }, { status: 500 });
     }
 }
-
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const creatorId = searchParams.get("creatorId");
-
-    if (!creatorId) {
-      return NextResponse.json(
-        { error: "creatorId is required" },
-        { status: 400 }
-      );
-    }
-
-    const streams = await prismaClient.stream.findMany({
-      where: {
-        userId: creatorId ?? "",
-      },
-    });
-
-    return NextResponse.json({ streams }, { status: 200 });
-    
-  } catch (error) {
-    console.error("Error fetching streams:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
-
-

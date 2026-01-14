@@ -10,6 +10,10 @@ const handler = NextAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
     })
   ],
+  secret: process.env.NEXTAUTH_SECRET ?? "secret",
+  pages: {
+    signIn: '/signin',
+  },
   callbacks: {
     async signIn(params) {
       console.log("SignIn callback", params);

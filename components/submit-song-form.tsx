@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
 interface SubmitSongFormProps {
-  onAddSong: (videoId: string, title: string) => void
+  onAddSong: (url: string) => Promise<void>
 }
 
 export default function SubmitSongForm({ onAddSong }: SubmitSongFormProps) {
@@ -64,15 +64,25 @@ export default function SubmitSongForm({ onAddSong }: SubmitSongFormProps) {
     }
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!preview) {
       setError("Please enter a valid YouTube URL")
       return
     }
 
-    onAddSong(preview.videoId, preview.title)
-    setUrl("")
-    setPreview(null)
+    setLoading(true)
+    try {
+      // Pass the full YouTube URL to onAddSong
+      const fullUrl = `https://www.youtube.com/watch?v=${preview.videoId}`;
+      await onAddSong(fullUrl)
+      setUrl("")
+      setPreview(null)
+    } catch (e) {
+      console.error("Error adding song:", e);
+      setError("Failed to add song")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

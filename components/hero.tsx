@@ -21,15 +21,8 @@ export function Hero() {
               Connect with your audience like never before. Let viewers vote on songs, request tracks, and shape the
               vibe of your live stream in real-time.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" className="gap-2">
-                <Play className="h-4 w-4" />
-                Start Streaming
-              </Button>
-              <Button size="lg" variant="outline" className="gap-2 bg-transparent">
-                <Headphones className="h-4 w-4" />
-                Watch Demo
-              </Button>
+          <div className="flex flex-col sm:flex-row gap-4">
+              
             </div>
             <div className="flex items-center gap-6 pt-4">
               <div className="flex -space-x-3">

@@ -2,7 +2,7 @@ import { Star } from "lucide-react"
 
 const testimonials = [
   {
-    quote: "StreamTune completely changed how I interact with my chat. The energy when fans pick the music is unreal.",
+    quote: "Muzi completely changed how I interact with my chat. The energy when fans pick the music is unreal.",
     author: "Alex Chen",
     role: "Twitch Partner, 50k followers",
     avatar: "/streamer-alex.jpg",
@@ -27,7 +27,7 @@ export function Testimonials() {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Loved by creators</h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">See what streamers are saying about StreamTune</p>
+          <p className="text-muted-foreground max-w-2xl mx-auto">See what streamers are saying about Muzi</p>
         </div>
         <div className="grid md:grid-cols-3 gap-6">
           {testimonials.map((testimonial, i) => (

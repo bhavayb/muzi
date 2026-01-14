@@ -1,6 +1,4 @@
-import Image from 'next/image'
 import React from 'react'
-// import Appbar from '../components/Appbar'
 import { Hero } from "@/components/hero"
 import { Features } from "@/components/features"
 import { HowItWorks } from "@/components/how-it-works"

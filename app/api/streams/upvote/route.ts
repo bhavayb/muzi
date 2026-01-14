@@ -28,8 +28,10 @@ export async function POST(req: NextRequest){
                 streamId: data.streamId,   
             }
         })
-    } catch (error) {
-        return new Response("Error processing downvote", {status: 500});
+        return new Response("Upvoted successfully", {status: 201});
+    } catch (e) {
+        console.error("Error processing upvote:", e);
+        return new Response("Error processing upvote", {status: 500});
     }
 
     

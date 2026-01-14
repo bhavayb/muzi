@@ -1,10 +1,9 @@
 import { prismaClient } from "@/app/lib/db";
-import { request } from "https";
 import { getServerSession } from "next-auth";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { z } from "zod";
 
-const upvoteSchema = z.object({
+const downvoteSchema = z.object({
     streamId: z.string(),
 })
 
@@ -22,7 +21,7 @@ export async function POST(req: NextRequest){
     }
 
     try {
-        const data = upvoteSchema.parse(await req.json());
+        const data = downvoteSchema.parse(await req.json());
         await prismaClient.upvote.delete({
             where:{
                 userId_streamId:{
@@ -31,17 +30,9 @@ export async function POST(req: NextRequest){
                 }
             }
         })
-    } catch (error) {
+        return new Response("Downvoted successfully", {status: 200});
+    } catch (e) {
+        console.error("Error processing downvote:", e);
         return new Response("Error processing downvote", {status: 500});
     }
-}
-
-export async function GET(req: NextRequest){
-    const creatorId =  req.nextUrl.searchParams.get("creatorId");
-    const streams = await prismaClient.stream.findMany({
-        where:{
-            userId: creatorId ?? "",
-        }
-    });
-    return NextResponse.json(streams);
 }

@@ -4,7 +4,7 @@ const steps = [
   {
     step: "01",
     title: "Connect Your Stream",
-    description: "Link StreamTune to your Twitch, YouTube, or Kick channel with one click",
+    description: "Link Muzi to your Twitch, YouTube, or Kick channel with one click",
   },
   {
     step: "02",
