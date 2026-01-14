@@ -1,4 +1,3 @@
-
 import GoogleProvider from "next-auth/providers/google";
 import NextAuth from "next-auth"
 import { prismaClient } from "@/app/lib/db";
@@ -10,14 +9,20 @@ const handler = NextAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
     })
   ],
-  secret: process.env.NEXTAUTH_SECRET ?? "secret",
+  secret: process.env.NEXTAUTH_SECRET ?? "fallback-secret-for-build",
   pages: {
     signIn: '/signin',
   },
   callbacks: {
     async signIn(params) {
+      // Skip database operations during build
+      if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
+        return true;
+      }
+      
       console.log("SignIn callback", params);
       if(!params.user.email) return false;
+      
       try {
         await prismaClient.user.create({
           data: {
@@ -31,7 +36,6 @@ const handler = NextAuth({
       return true;
     }
   }
-
 })
 
 export { handler as GET, handler as POST }
