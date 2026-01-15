@@ -2,13 +2,48 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prismaClient } from "@/app/lib/db";
 import { getServerSession } from "next-auth";
-import youtubesearchapi from "youtube-search-api";
 
 const yt_regex = new RegExp("^https:\\/\\/www\\.youtube\\.com\\/watch\\?v=[\\w-]{11}");
 
 const addStreamSchema = z.object({
     url: z.string()
 });
+
+async function getYouTubeVideoDetails(videoId: string) {
+    const apiKey = process.env.YOUTUBE_API_KEY;
+    
+    if (!apiKey) {
+        throw new Error("YouTube API key not configured");
+    }
+
+    const response = await fetch(
+        `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${apiKey}`,
+        { 
+            next: { revalidate: 3600 }, // Cache for 1 hour
+            headers: {
+                'Accept': 'application/json',
+            }
+        }
+    );
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error("YouTube API Error:", errorText);
+        throw new Error(`YouTube API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (!data.items || data.items.length === 0) {
+        throw new Error("Video not found");
+    }
+
+    const video = data.items[0];
+    return {
+        title: video.snippet.title,
+        thumbnails: video.snippet.thumbnails
+    };
+}
 
 export async function POST(req: NextRequest) {
     try {
@@ -47,12 +82,20 @@ export async function POST(req: NextRequest) {
         }
 
         // Fetch video details from YouTube
-        const res = await youtubesearchapi.GetVideoDetails(extractedId);
-        console.log("YouTube Video title:", res.title);
-        console.log("YouTube Video thumbnail:", res.thumbnail.thumbnails);
+        const videoDetails = await getYouTubeVideoDetails(extractedId);
         
-        const thumbnails = res.thumbnail.thumbnails;
-        thumbnails.sort((a: {width: number}, b: {width: number}) => a.width < b.width ? -1 : 1);
+        console.log("YouTube Video title:", videoDetails.title);
+        console.log("YouTube Video thumbnails:", videoDetails.thumbnails);
+
+        // Get thumbnails (YouTube provides: default, medium, high, standard, maxres)
+        const smallImg = videoDetails.thumbnails.medium?.url || 
+                        videoDetails.thumbnails.default?.url ||
+                        "https://imgs.search.brave.com/vryedy2GcFbB-YIPTMN6NkKSxdqGyMuUPM8ctnPsHwM/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9hdmF0/YXJmaWxlcy5hbHBo/YWNvZGVycy5jb20v/MjE0L3RodW1iLTM1/MC0yMTQ3MTIud2Vi/cA";
+        
+        const bigImg = videoDetails.thumbnails.maxres?.url || 
+                      videoDetails.thumbnails.high?.url ||
+                      videoDetails.thumbnails.standard?.url ||
+                      "https://imgs.search.brave.com/vryedy2GcFbB-YIPTMN6NkKSxdqGyMuUPM8ctnPsHwM/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9hdmF0/YXJmaWxlcy5hbHBo/YWNvZGVycy5jb20v/MjE0L3RodW1iLTM1/MC0yMTQ3MTIud2Vi/cA";
 
         // Create stream in database
         const stream = await prismaClient.stream.create({
@@ -61,9 +104,9 @@ export async function POST(req: NextRequest) {
                 url: data.url,
                 extractedId,
                 type: "YouTube",
-                title: res.title ?? "Untitled Stream",
-                smallImg: (thumbnails.length > 1 ? thumbnails[thumbnails.length - 2].url : thumbnails[thumbnails.length - 1].url) ?? "https://imgs.search.brave.com/vryedy2GcFbB-YIPTMN6NkKSxdqGyMuUPM8ctnPsHwM/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9hdmF0/YXJmaWxlcy5hbHBo/YWNvZGVycy5jb20v/MjE0L3RodW1iLTM1/MC0yMTQ3MTIud2Vi/cA",
-                bigImg: thumbnails[thumbnails.length - 1].url ?? "https://imgs.search.brave.com/vryedy2GcFbB-YIPTMN6NkKSxdqGyMuUPM8ctnPsHwM/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9hdmF0/YXJmaWxlcy5hbHBo/YWNvZGVycy5jb20v/MjE0L3RodW1iLTM1/MC0yMTQ3MTIud2Vi/cA"
+                title: videoDetails.title ?? "Untitled Stream",
+                smallImg,
+                bigImg
             }
         });
 
