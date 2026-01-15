@@ -1,20 +1,9 @@
 import { prismaClient } from "@/app/lib/db";
-import { getServerSession } from "next-auth/next";
+import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
-import GoogleProvider from "next-auth/providers/google";
-
-const authOptions = {
-    providers: [
-        GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-        })
-    ],
-    secret: process.env.NEXTAUTH_SECRET ?? "fallback-secret-for-build",
-};
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   
   if (!session?.user?.email) {
     return NextResponse.json(

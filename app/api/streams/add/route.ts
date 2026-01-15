@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prismaClient } from "@/app/lib/db";
-import { getServerSession } from "next-auth/next";
+import { getServerSession } from "next-auth";
 import youtubesearchapi from "youtube-search-api";
-import GoogleProvider from "next-auth/providers/google";
 
 const yt_regex = new RegExp("^https:\\/\\/www\\.youtube\\.com\\/watch\\?v=[\\w-]{11}");
 
@@ -11,20 +10,10 @@ const addStreamSchema = z.object({
     url: z.string()
 });
 
-const authOptions = {
-    providers: [
-        GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-        })
-    ],
-    secret: process.env.NEXTAUTH_SECRET ?? "fallback-secret-for-build",
-};
-
 export async function POST(req: NextRequest) {
     try {
         // Get user from session
-        const session = await getServerSession(authOptions);
+        const session = await getServerSession();
         if (!session?.user?.email) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }

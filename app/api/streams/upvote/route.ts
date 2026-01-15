@@ -1,25 +1,14 @@
 import { prismaClient } from "@/app/lib/db";
-import { getServerSession } from "next-auth/next";
+import { getServerSession } from "next-auth";
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import GoogleProvider from "next-auth/providers/google";
 
 const upvoteSchema = z.object({
     streamId: z.string(),
 })
 
-const authOptions = {
-    providers: [
-        GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-        })
-    ],
-    secret: process.env.NEXTAUTH_SECRET ?? "fallback-secret-for-build",
-};
-
 export async function POST(req: NextRequest){
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
 
     const user = await prismaClient.user.findFirst({
         where:{
